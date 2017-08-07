@@ -23,7 +23,21 @@ get '/show' => sub {
 app->start;
 
 __DATA__
+@@ layouts/main.html.ep
+<!DOCTYPE html>
+<html>
+    <head>
+        <title><%= title %></title>
+    </head>
+    <body>
+        <%= content %>
+    </body>
+</html>
+
+
 @@ list.html.ep
+% title 'ircscan: home';
+% layout 'main';
 % my $dbh   = DBI->connect("dbi:SQLite:dbname=ircdump.sqlite", "", "");
 % my $query = $dbh->prepare("SELECT COUNT(*) as count FROM servers");
 % my $count;
@@ -56,6 +70,8 @@ Welcome to ircscan. A humble project to figure out what the most popular ircds a
 </table>
 
 @@ version.html.ep
+% title 'ircscan: version lookup';
+% layout 'main';
 % my $dbh   = DBI->connect("dbi:SQLite:dbname=ircdump.sqlite", "", "");
 % my $query = $dbh->prepare("SELECT COUNT(*) as count FROM servers WHERE ver=?");
 % my $count;
