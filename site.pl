@@ -17,6 +17,7 @@ __DATA__
 @@ list.html.ep
 % my $dbh   = DBI->connect("dbi:SQLite:dbname=ircdump.sqlite", "", "");
 % my $query = $dbh->prepare("SELECT COUNT(*) as count FROM servers");
+% my $count;
 % $query->execute();
 % $count = ($query->fetchrow_array())[0];
 Welcome to ircscan. A humble project to figure out what the most popular ircds are. There are <%= $count %> servers in the DB.<br /><br />
