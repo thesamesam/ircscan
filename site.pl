@@ -11,6 +11,15 @@ get '/' => sub {
     );
 };
 
+get '/show' => sub {
+    my $context = shift;
+    my $version = $context->param('version');
+    $context->render(
+        version  => $version,
+        template => 'version',
+    );
+};
+
 app->start;
 
 __DATA__
@@ -40,8 +49,34 @@ Welcome to ircscan. A humble project to figure out what the most popular ircds a
     <tr><td><b>Version</b></td><td><b>Count</b></td></tr>
         % while(my $row = $query->fetchrow_hashref()) {
             <tr>
-            <td><%= $row->{ver} =%></td>
+            <td><a href="/show?version=<%= $row->{ver} =%>"><%= $row->{ver} =%></a></td>
             <td><%= $row->{count}  =%></td>
+            <tr/>
+        % }
+</table>
+
+@@ version.html.ep
+% my $dbh   = DBI->connect("dbi:SQLite:dbname=ircdump.sqlite", "", "");
+% my $query = $dbh->prepare("SELECT COUNT(*) as count FROM servers WHERE ver=?");
+% my $count;
+% $query->execute($version);
+% $count = ($query->fetchrow_array())[0];
+
+You're interested in IRC servers running <%= $version %>. We found <%= $count %> of them. <br /><br />
+
+% $query = $dbh->prepare("SELECT host, port, tls FROM servers WHERE ver=?");
+% $query->execute($version);
+<table border="5" style="float:left; width:45%;">
+    <tr>
+        <td><b>Host</b></td>
+        <td><b>Port</b></td>
+        <td><b>TLS</b></td>
+    </tr>
+        % while(my $row = $query->fetchrow_hashref()) {
+            <tr>
+            <td><%= $row->{host} =%></td>
+            <td><%= $row->{port} =%></td>
+            <td><%= $row->{tls} ? "Yes" : "No" =%></td>
             <tr/>
         % }
 </table>
