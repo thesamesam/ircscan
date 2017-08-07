@@ -127,12 +127,19 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
     next;
   }
 
-  $socket->write("USER $USERNAME $USERNAME $USERNAME :$REALNAME\r\n");
-  $socket->write("NICK $NICKNAME\r\n");
+  $socket->syswrite("NICK $NICKNAME\r\n");
+  $socket->syswrite("USER $USERNAME $USERNAME $USERNAME :$REALNAME\r\n");
 
+  my $data;
   READ_LOOP:while(1) {
-    $socket->read(my $data, 1024);
+    $socket->recv($data, 1024);
+    if($data eq '') {
+        $count++;
+        next NETWORK_LOOP;
+    }
+
     my @split_lines = split("\r\n", $data);
+
     foreach(@split_lines) {
       my @split_space = split(' ');
       my @split_colon = split(':');
@@ -145,14 +152,15 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
 	print "got version: $version\r\n";
 	last READ_LOOP;
       } elsif($split_space[0] eq 'PING') {
-	my $pong_cookie = $split_colon[1];
+	my $pong_cookie = $split_colon[1] // $split_space[1];
 	# TRIVIA: some ircds (like inspircd) only support PONG cookie (sans colon)
 	# TRIVIA: cmpctircd supported the colon-case first and supports both
 	# TRIVIA: yet i am writing it without
+	$pong_cookie = ":$pong_cookie" if($_ =~ /:/);
 	$socket->write("PONG $pong_cookie\r\n");
-      } elsif($_ =~ /ERROR/) {
-	$count++;
-	next NETWORK_LOOP;
+      } elsif($_ =~ /ERROR/ or $_ =~ /CLOSING/) {
+        $count++;
+        next NETWORK_LOOP;
       }
     }
   }
