@@ -132,7 +132,9 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
 
   my $data;
   READ_LOOP:while(1) {
-    $socket->recv($data, 1024);
+    $socket->read($data, 1024) if($tls);
+    $socket->recv($data, 1024) if(!$tls);
+
     if($data eq '') {
         $count++;
         next NETWORK_LOOP;
