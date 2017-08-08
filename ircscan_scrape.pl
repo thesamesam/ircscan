@@ -64,7 +64,7 @@ setup_db($dbh) if !$db_exists;
 foreach(@data) {
     # Collect all of the network names and corresponding servers
     chomp;
-    if($_ =~ /N/) {
+    if($_ =~ /N=/) {
     $name   = (split("="))[1];
     $servers->{$name} = ();
     # Tell the db about new server name
@@ -75,7 +75,7 @@ foreach(@data) {
       $query = $dbh->prepare("INSERT INTO networks VALUES(?)");
       $query->execute($name);
     }
-  } elsif($_ =~ /S/) {
+  } elsif($_ =~ /S=/) {
     $server = (split("="))[1];
     push @{$servers->{$name}}, $server;
   }
