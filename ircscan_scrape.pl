@@ -36,7 +36,8 @@ sub setup_db {
         host   text         NOT NULL,
         port   text         NOT NULL,
         tls    boolean,
-        ver    text         NOT_NULL
+        ircd   text         NOT_NULL,
+        vers   text         NOT_NULL
     );");
     $qh->execute();
 }
@@ -91,6 +92,8 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
     my $server_host  = $servers->{$network_name}[0];
     my $server_port  = (split("/", $server_host))[1] // "6667";
     my $tls          = ($server_port =~ qw/\+/) ? 1 : 0;
+    my $id           = "";
+    my $ircd         = "";
     my $version      = "";
 
     # Strip out anything after the / in $server_host (already parsed)
@@ -149,9 +152,77 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
             if($split_space[1] eq '002') {
                 # RPL_WELCOME
                 my $good_bits = $split_colon[2];
-                $version   = (split("running version", $good_bits))[1];
-                $version =~ s/^\s+//;
-                print "got version: $version\r\n";
+                $id  = (split("running version", $good_bits))[1];
+                # strip out anything after the first space
+                $id =~ s/^\s+//;
+
+                # let's grab the actual ircd
+                if($id =~ /-/) {
+                    my @split_dash = split("-", $id);
+                    my $dash_count = @split_dash;
+
+                    # If there are multiple dashes, e.g. ircd-seven-X.X.X, take this into account.
+                    # (The if has > 2 instead of > 1 because a string with one dash produces two chunks)
+                    if($dash_count > 2) {
+                        for(my $k = 0; $k < $dash_count; $k++) {
+                            # Consider 'ircd-seven-1.1.4' (Freenode)
+                            # If we are in the last part of the split('-'), it is actually the version (1.1.4)
+                            # split('-') => ['ircd', 'seven', "1.1.4"]
+                            if($k == ($dash_count - 1)) {
+                                $version = $split_dash[$k];
+                            } else {
+                                # Not the last part? Then it's still, by definition, a fragment of a string with -s.
+                                # With our example, it could be 'ircd' or 'seven'.
+                                # So append it to the previous chunk.
+                                $ircd .= $split_dash[$k];
+                                # Only append an additional '-' if we are not the last chunk.
+                                # This prevents strings like 'ircd-seven-' being formed.
+                                $ircd .= "-" if($k < ($dash_count - 2));
+                            }
+                        }
+                    } else {
+                        $ircd    = $split_dash[0];
+                        $version = $split_dash[1];
+
+                        # Special patch version at the end?
+                        # Consider 'UnrealIRCd3.2.10.3-gs' (GeekShed)
+                        # We would call the ircd 'UnrealIRCd-gs', with a version of '3.2.10.3'
+                        # TODO: We could count everything up to the character before the first '.'
+                        # TODO: Then would only count numbers as a version.. and append the first and last parts.
+                        # TODO: Quite messy. Need to see if it's satisfactory to leave this as-is.
+                    }
+
+                    # Parentheses? Need to consider these too. They need to be balanced.
+                    # Consider 'plexus-4(hybrid-8.1.20)' (Rizon)
+                    # The ircd will be 'plexus-4(hybrid' because this is up to the last '-#.
+                    # Another problematic string was 'bahamut-1.8(06)' (EnterTheGame).
+                    if($id =~ /\(/ || $id =~ /\)/) {
+                        # Overall they're unbalanced. Need to find out where.
+                        my $left_ircd_parens  = ($ircd =~ /\(/);
+                        my $right_ircd_parens = ($ircd =~ /\(/);
+                        if($left_ircd_parens != $right_ircd_parens) {
+                            if($left_ircd_parens > $right_ircd_parens) {
+                                $ircd .= "\)";
+                            } else {
+                                $ircd  =~ s/\)//;
+                            }
+                        }
+
+                        my $left_version_parens  = ($version =~ /\(/);
+                        my $right_version_parens = ($version =~ /\(/);
+                        if($left_version_parens != $right_version_parens) {
+                            if($left_version_parens > $right_version_parens) {
+                                $version .= "\)";
+                            } else {
+                                $version  =~ s/\)//;
+                            }
+                        }
+                    }
+
+                    print "=> got id:   $id\r\n";
+                    print "=> got ircd: $ircd\r\n";
+                    print "=> got version: $version\r\n";
+                }
                 last READ_LOOP;
             } elsif($split_space[0] eq 'PING') {
                 my $pong_cookie = $split_colon[1] // $split_space[1];
@@ -171,8 +242,8 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
     $socket->close();
 
     # Add the server to the database now we've got the version
-    $query = $dbh->prepare("INSERT INTO servers VALUES(?, ?, ?, ?, ?)");
-    $query->execute($rowid, $server_host, $server_port, $tls, $version);
+    $query = $dbh->prepare("INSERT INTO servers VALUES(?, ?, ?, ?, ?, ?)");
+    $query->execute($rowid, $server_host, $server_port, $tls, $ircd, $version);
 
     $count++;
 }
