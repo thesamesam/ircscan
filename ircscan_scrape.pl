@@ -223,6 +223,14 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
                     print "=> got ircd: $ircd\r\n";
                     print "=> got version: $version\r\n";
                 }
+
+                if($ircd eq '') {
+                    print "=> couldn't parse version from $server_host, skipping\r\n";
+                    print "=> if you're sure $server_host:$server_port is listening and you have already retried, please report this as a bug\r\n";
+                    $count++;
+                    next NETWORK_LOOP;
+                }
+
                 last READ_LOOP;
             } elsif($split_space[0] eq 'PING') {
                 my $pong_cookie = $split_colon[1] // $split_space[1];

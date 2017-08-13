@@ -46,24 +46,34 @@ __DATA__
 Welcome to ircscan. A humble project to figure out what the most popular ircds are. There are <%= $count %> servers in the DB.<br /><br />
 
 <table border="5" style="float:left; width:45%;">
-    % my $query = $dbh->prepare("SELECT host,ver FROM servers");
+    % my $query = $dbh->prepare("SELECT host,ircd,vers FROM servers");
     % $query->execute();
-    <tr><td><b>Host</b></td><td><b>Version</b></td></tr>
+    <tr>
+        <td><b>Host</b></td>
+        <td><b>IRCd</b></td>
+        <td><b>Version</b></td>
+    </tr>
         % while(my $row = $query->fetchrow_hashref()) {
             <tr>
             <td><%= $row->{host} =%></td>
-            <td><%= $row->{ver}  =%></td>
+            <td><%= $row->{ircd} =%></td>
+            <td><%= $row->{vers} =%></td>
             <tr/>
         % }
 </table>
 
-% $query = $dbh->prepare("SELECT ver, COUNT(*) AS count FROM servers GROUP BY ver ORDER BY COUNT(*) DESC");
+% $query = $dbh->prepare("SELECT ircd, vers, COUNT(*) AS count FROM servers GROUP BY ircd ORDER BY COUNT(*) DESC");
 % $query->execute();
 <table border="5" style="float:right; width:45%;">
-    <tr><td><b>Version</b></td><td><b>Count</b></td></tr>
+    <tr>
+        <td><b>IRCd</b></td>
+        <td><b>Version</b></td>
+        <td><b>Count</b></td>
+    </tr>
         % while(my $row = $query->fetchrow_hashref()) {
             <tr>
-            <td><a href="/show?version=<%= $row->{ver} =%>"><%= $row->{ver} =%></a></td>
+            <td><a href="/show?version=<%= $row->{vers} =%>"><%= $row->{ircd} =%></a></td>
+            <td><%= $row->{vers}   =%></td>
             <td><%= $row->{count}  =%></td>
             <tr/>
         % }
