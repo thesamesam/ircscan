@@ -112,7 +112,7 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
     $query->execute($server_host, $server_port, $tls);
     while($query->fetchrow_array) {
         # if there are any rows...
-        print "already got $server_host, skipping\r\n";
+        print "=> already got $server_host, skipping\r\n";
         next NETWORK_LOOP;
     }
 

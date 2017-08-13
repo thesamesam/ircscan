@@ -83,14 +83,14 @@ Welcome to ircscan. A humble project to figure out what the most popular ircds a
 % title 'ircscan: version lookup';
 % layout 'main';
 % my $dbh   = DBI->connect("dbi:SQLite:dbname=ircdump.sqlite", "", "");
-% my $query = $dbh->prepare("SELECT COUNT(*) as count FROM servers WHERE ver=?");
+% my $query = $dbh->prepare("SELECT COUNT(*) as count FROM servers WHERE vers=?");
 % my $count;
 % $query->execute($version);
 % $count = ($query->fetchrow_array())[0];
 
 You're interested in IRC servers running <%= $version %>. We found <%= $count %> of them. <br /><br />
 
-% $query = $dbh->prepare("SELECT host, port, tls FROM servers WHERE ver=?");
+% $query = $dbh->prepare("SELECT host, port, tls FROM servers WHERE vers=?");
 % $query->execute($version);
 <table border="5" style="float:left; width:45%;">
     <tr>
