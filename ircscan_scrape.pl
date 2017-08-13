@@ -120,7 +120,7 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
         $socket = IO::Socket::SSL->new(PeerAddr => $server_host, PeerPort => $server_port, Proto => 'tcp');
     } else {
         $socket = IO::Socket::INET->new(PeerAddr => $server_host, PeerPort => $server_port, Proto => 'tcp');
-  }
+    }
 
     if(!$socket) {
         $count++;
