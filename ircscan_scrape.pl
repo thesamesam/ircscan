@@ -219,10 +219,27 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
                         }
                     }
 
-                    print "=> got id:   $id\r\n";
-                    print "=> got ircd: $ircd\r\n";
-                    print "=> got version: $version\r\n";
+                } else {
+                    # Not all IRCds like to use a dash.
+                    # Consider 'Unreal3.2.10.4'
+                    # A similar principle applies as with some of the dash parsing code.
+                    my $found_integer = 0;
+                    my $current_char  = '';
+                    for(my $k = 0; $k < length $id; $k++) {
+                        # Check all of the characters
+                        # All characters are part of the ircd until we find an integer
+                        # Once we've found an integer, we count it as part of the version.
+                        $current_char  = substr($id, $k, 1);
+                        $found_integer = 1 if($current_char =~ /\d/);
+
+                        $ircd    .= $current_char if(!$found_integer);
+                        $version .= $current_char if($found_integer);
+                    }
                 }
+
+                print "=> got id:   $id\r\n";
+                print "=> got ircd: $ircd\r\n";
+                print "=> got version: $version\r\n";
 
                 if($ircd eq '') {
                     print "=> couldn't parse version from $server_host, skipping\r\n";
