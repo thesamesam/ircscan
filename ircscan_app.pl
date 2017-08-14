@@ -75,7 +75,16 @@ Welcome to ircscan. A humble project to figure out what the most popular ircds a
         % while(my $row = $query->fetchrow_hashref()) {
             <tr>
             <td><a href="/show?ircd=<%= $row->{ircd} =%>"><%= $row->{ircd} =%></a></td>
-            <td><a href="/show?ircd=<%= $row->{ircd} =%>&version=<%= $row->{vers} =%>"><%= $row->{vers} =%></td>
+            <td>
+                % my @cache  = ();
+                % my $vQuery = $dbh->prepare("SELECT vers FROM servers WHERE ircd=?");
+                % $vQuery->execute($row->{ircd});
+                % while(my $vRow = $vQuery->fetchrow_hashref()) {
+                    % next if($vRow->{vers} ~~ @cache);
+                    % push @cache, $vRow->{vers};
+                    <a href="/show?ircd=<%= $row->{ircd} =%>&version=<%= $vRow->{vers} =%>"><%= $vRow->{vers} =%><br />
+                % }
+            </td>
             <td><%= $row->{count}  =%></td>
             <tr/>
         % }
