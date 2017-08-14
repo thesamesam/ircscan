@@ -164,22 +164,38 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
                     # If there are multiple dashes, e.g. ircd-seven-X.X.X, take this into account.
                     # (The if has > 2 instead of > 1 because a string with one dash produces two chunks)
                     if($dash_count > 2) {
+                        my $found_integer = 0;
                         for(my $k = 0; $k < $dash_count; $k++) {
-                            # Consider 'ircd-seven-1.1.4' (Freenode)
-                            # If we are in the last part of the split('-'), it is actually the version (1.1.4)
-                            # split('-') => ['ircd', 'seven', "1.1.4"]
-                            if($k == ($dash_count - 1)) {
-                                $version = $split_dash[$k];
+                            # See below comments. Start counting everything as a version once we see the first integer.
+                            $found_integer = 1 if($split_dash[$k] =~ /\d/);
+
+                            if($found_integer && $ircd ne '') {
+                                # A version string may span multiple dashes.
+                                # Consider 'charybdis-4-rc3'. The version is '4-rc3'.
+                                # The solution is to continue the below logic UNTIL we find an integer, then count everything as the version.
+                                $version .= $split_dash[$k];
+                                # Only append if not last chunk (see below)
+                                $version .= "-" if($k < ($dash_count - 1));
                             } else {
-                                # Not the last part? Then it's still, by definition, a fragment of a string with -s.
-                                # With our example, it could be 'ircd' or 'seven'.
-                                # So append it to the previous chunk.
-                                $ircd .= $split_dash[$k];
-                                # Only append an additional '-' if we are not the last chunk.
-                                # This prevents strings like 'ircd-seven-' being formed.
-                                $ircd .= "-" if($k < ($dash_count - 2));
+                                # Consider 'ircd-seven-1.1.4' (Freenode)
+                                # If we are in the last part of the split('-'), it is actually the version (1.1.4)
+                                # split('-') => ['ircd', 'seven', "1.1.4"]
+                                if($k == ($dash_count - 1)) {
+                                    $version = $split_dash[$k];
+                                } else {
+                                    # Not the last part? Then it's still, by definition, a fragment of a string with -s.
+                                    # With our example, it could be 'ircd' or 'seven'.
+                                    # So append it to the previous chunk.
+                                    $ircd .= $split_dash[$k];
+                                    # Only append an additional '-' if we are not the last chunk.
+                                    # This prevents strings like 'ircd-seven-' being formed.
+                                    $ircd .= "-" if($k < ($dash_count - 2));
+                                }
                             }
                         }
+
+                        # Strip a trailing - just in case
+                        $ircd =~ s/-$//;
                     } else {
                         $ircd    = $split_dash[0];
                         $version = $split_dash[1];
@@ -190,6 +206,7 @@ NETWORK_LOOP:foreach(keys(%$servers)) {
                         # TODO: We could count everything up to the character before the first '.'
                         # TODO: Then would only count numbers as a version.. and append the first and last parts.
                         # TODO: Quite messy. Need to see if it's satisfactory to leave this as-is.
+                        # TODO: This still isn't covered by the other code to deal with if we've seen an integer yet
                     }
 
                     # Parentheses? Need to consider these too. They need to be balanced.
