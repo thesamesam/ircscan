@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# name:   ircscan_scrape.pl
 # author: sam <sam@cmpct.info>
 # a script to scrape the hexchat default server list
 # stores ircd/version of each in sqlite db
@@ -42,17 +43,9 @@ sub setup_db {
     $qh->execute();
 }
 
-sub read_file {
-    my $handle;
-    my @lines = ();
-    open($handle, "<", $HXFILE) or die "couldn't read file";
-    while(my $line = <$handle>) {
-    push @lines, $line;
-    }
-    return @lines;
-}
-
-my @data     = read_file();
+#
+# Initialise everything
+#
 my $servers  = {};
 my $name;
 my $server;
@@ -62,24 +55,40 @@ my $db_exists = (-e $DBFILE);
 my $dbh       = DBI->connect("dbi:SQLite:dbname=$DBFILE", "", "");
 setup_db($dbh) if !$db_exists;
 
+#
+# Hexchat
+# (Parse Hexchat's config file for servers)
+#
+
+sub read_file {
+    my $handle;
+    my @lines = ();
+    open($handle, "<", $HXFILE) or die "couldn't read file";
+    while(my $line = <$handle>) {
+        push @lines, $line;
+    }
+    return @lines;
+}
+
+my @data = read_file();
 foreach(@data) {
     # Collect all of the network names and corresponding servers
     chomp;
     if($_ =~ /N=/) {
-    $name   = (split("="))[1];
-    $servers->{$name} = ();
-    # Tell the db about new server name
-    $query = $dbh->prepare("SELECT name FROM networks WHERE name=?");
-    $query->execute($name);
-    if($query->rows == 0) {
-      # Only add if not already present
-      $query = $dbh->prepare("INSERT INTO networks VALUES(?)");
-      $query->execute($name);
+        $name   = (split("="))[1];
+        $servers->{$name} = ();
+        # Tell the db about new server name
+        $query = $dbh->prepare("SELECT name FROM networks WHERE name=?");
+        $query->execute($name);
+        if($query->rows == 0) {
+            # Only add if not already present
+            $query = $dbh->prepare("INSERT INTO networks VALUES(?)");
+            $query->execute($name);
+        }
+    } elsif($_ =~ /S=/) {
+        $server = (split("="))[1];
+        push @{$servers->{$name}}, $server;
     }
-  } elsif($_ =~ /S=/) {
-    $server = (split("="))[1];
-    push @{$servers->{$name}}, $server;
-  }
 }
 
 # got a list of servers for each network now
